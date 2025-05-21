@@ -25,9 +25,9 @@ export default function CadastroNota() {
   const [nota, setNota] = useState("");
   const [descricao, setDescricao] = useState("");
   const [erroNota, setErroNota] = useState("");
+  const [notas, setNotas] = useState([]);
 
   const opcoesDescricao = [
-    "ATV 1", "ATV 2", "ATV 3", "ATV 4",
     "PR 1", "PR 2", "PR 3", "PR 4",
     "RP 1", "RP 2", "RP 3", "RP 4"
   ];
@@ -50,7 +50,6 @@ export default function CadastroNota() {
         if (!res.ok) throw new Error("Erro ao buscar disciplinas");
         const data = await res.json();
         setDisciplinas(data);
-        
       } catch (error) {
         alert(error.message);
       }
@@ -70,18 +69,14 @@ export default function CadastroNota() {
     return true;
   };
 
-  const handleSubmit = async () => {
+  const adicionarNota = () => {
     if (!validarNota(nota)) return;
-    if (!trimestre.trim()) {
-      alert("Trimestre é obrigatório");
-      return;
-    }
-    if (!disciplina) {
-      alert("Disciplina é obrigatória");
+    if (!trimestre.trim() || !disciplina || !descricao.trim()) {
+      alert("Todos os campos são obrigatórios");
       return;
     }
 
-    const data = {
+    const novaNota = {
       aluno_id: Number(id),
       disciplina_id: Number(disciplina),
       trimestre: trimestre.trim(),
@@ -89,26 +84,32 @@ export default function CadastroNota() {
       descricao: descricao.trim(),
     };
 
-    try {
-      const res = await fetch("http://localhost:3001/notas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+    setNotas([...notas, novaNota]);
+    setDisciplina("");
+    setTrimestre("");
+    setNota("");
+    setDescricao("");
+  };
 
-      if (res.ok) {
-        alert("Nota cadastrada com sucesso!");
-        setDisciplina("");
-        setTrimestre("");
-        setNota("");
-        setDescricao("");
-        navigate(`/homeNota/${id}`);
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Erro ao cadastrar nota");
+  const submitNotas = async () => {
+    if (notas.length !== 4) {
+      alert("Você deve adicionar exatamente 4 notas.");
+      return;
+    }
+
+    try {
+      for (const notaObj of notas) {
+        const res = await fetch("http://localhost:3001/notas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(notaObj),
+        });
+        if (!res.ok) throw new Error("Erro ao cadastrar nota");
       }
+      alert("4 notas cadastradas com sucesso!");
+      navigate(`/homeNota/${id}`);
     } catch (error) {
-      alert("Erro na conexão com o servidor");
+      alert("Erro ao enviar notas.");
     }
   };
 
@@ -192,37 +193,57 @@ export default function CadastroNota() {
 
             <TextField
               select
-              label="Descrição (opcional)"
+              required
+              label="Descrição"
               variant="filled"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
               fullWidth
             >
-              <MenuItem value="">-- Nenhuma --</MenuItem>
               {opcoesDescricao.map((desc) => (
                 <MenuItem key={desc} value={desc}>
                   {desc}
                 </MenuItem>
               ))}
             </TextField>
+
+            <Button
+              variant="outlined"
+              onClick={adicionarNota}
+              disabled={
+                !!erroNota ||
+                nota === "" ||
+                trimestre.trim() === "" ||
+                disciplina === "" ||
+                descricao.trim() === ""
+              }
+            >
+              Adicionar Nota
+            </Button>
+
+            {notas.length > 0 && (
+              <Box>
+                <Typography variant="subtitle1">Notas adicionadas:</Typography>
+                {notas.map((n, i) => (
+                  <Typography key={i}>
+                    {n.descricao} - {n.nota} - {n.trimestre}
+                  </Typography>
+                ))}
+              </Box>
+            )}
+
+            <Button
+              variant="contained"
+              color="primary"
+              endIcon={<SendIcon />}
+              onClick={submitNotas}
+              fullWidth
+              disabled={notas.length !== 4}
+            >
+              Enviar 4 Notas
+            </Button>
           </Stack>
         </CardContent>
-
-        <Button
-          variant="contained"
-          endIcon={<SendIcon />}
-          onClick={handleSubmit}
-          fullWidth
-          sx={{ mt: 3, py: 1.5, fontWeight: "bold" }}
-          disabled={
-            !!erroNota ||
-            nota === "" ||
-            trimestre.trim() === "" ||
-            disciplina === ""
-          }
-        >
-          Cadastrar Nota
-        </Button>
       </Card>
     </Box>
   );

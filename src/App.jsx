@@ -8,6 +8,7 @@ import HomeNota from './homeNota.jsx';
 import CadastroNota from './CadastroNota.jsx';
 import EditarNota from './EditarNota.jsx';
 import DeletarNota from './DeletarNota.jsx';
+import CalculoMedias from './CalculoMedias.jsx';
 
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
         <Route path="/cadastroNota/:id" element={<CadastroNota />} />
         <Route path="/editarNota/:id" element={<EditarNota />} />
         <Route path="/deletarNota/:id" element={<DeletarNota />} />
+        <Route path="/calculo-medias/:id" element={<CalculoMedias />} />
       </Routes>
     </Router>
   );
