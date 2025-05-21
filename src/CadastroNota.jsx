@@ -19,32 +19,12 @@ export default function CadastroNota() {
   const isSmallScreen = useMediaQuery("(max-width:600px)");
 
   const [aluno, setAluno] = useState(null);
+  const [disciplinas, setDisciplinas] = useState([]);
   const [disciplina, setDisciplina] = useState("");
   const [trimestre, setTrimestre] = useState("");
   const [nota, setNota] = useState("");
   const [descricao, setDescricao] = useState("");
   const [erroNota, setErroNota] = useState("");
-
-  const disciplinasFixas = [
-    { id: 1, nome: "Literatura Inglesa" },
-    { id: 2, nome: "Álgebra II" },
-    { id: 3, nome: "Geometria" },
-    { id: 4, nome: "Pré-Cálculo" },
-    { id: 5, nome: "Cálculo" },
-    { id: 6, nome: "Biologia" },
-    { id: 7, nome: "Química" },
-    { id: 8, nome: "Física" },
-    { id: 9, nome: "História dos EUA" },
-    { id: 10, nome: "História Mundial" },
-    { id: 11, nome: "Governo" },
-    { id: 12, nome: "Economia" },
-    { id: 13, nome: "Espanhol" },
-    { id: 14, nome: "Francês" },
-    { id: 15, nome: "Artes" },
-    { id: 16, nome: "Música" },
-    { id: 17, nome: "Educação Física" },
-    { id: 18, nome: "Ciência da Computação" },
-  ];
 
   const opcoesDescricao = [
     "ATV 1", "ATV 2", "ATV 3", "ATV 4",
@@ -63,7 +43,21 @@ export default function CadastroNota() {
         alert(error.message);
       }
     }
+
+    async function fetchDisciplinas() {
+      try {
+        const res = await fetch("http://localhost:3001/disciplinas");
+        if (!res.ok) throw new Error("Erro ao buscar disciplinas");
+        const data = await res.json();
+        setDisciplinas(data);
+        
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
     fetchAluno();
+    fetchDisciplinas();
   }, [id]);
 
   const validarNota = (value) => {
@@ -164,7 +158,7 @@ export default function CadastroNota() {
               onChange={(e) => setDisciplina(e.target.value)}
               fullWidth
             >
-              {disciplinasFixas.map(({ id, nome }) => (
+              {disciplinas.map(({ id, nome }) => (
                 <MenuItem key={id} value={id}>
                   {nome}
                 </MenuItem>

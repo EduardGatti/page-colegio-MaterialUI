@@ -1,4 +1,3 @@
-// HomeNota.jsx
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -17,28 +16,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import DeletarNota from "./DeletarNota";
 
-const disciplinasFixas = {
-  1: "Literatura Inglesa",
-  2: "Álgebra II",
-  3: "Geometria",
-  4: "Pré-Cálculo",
-  5: "Cálculo",
-  6: "Biologia",
-  7: "Química",
-  8: "Física",
-  9: "História dos EUA",
-  10: "História Mundial",
-  11: "Governo",
-  12: "Economia",
-  13: "Espanhol",
-  14: "Francês",
-  15: "Artes",
-  16: "Música",
-  17: "Educação Física",
-  18: "Ciência da Computação",
-};
-
-function calcularMediasPorDescricaoENMateria(notas) {
+function calcularMedia(notas) {
   const grupos = {};
 
   notas.forEach(({ descricao, disciplina_id, nota }) => {
@@ -67,6 +45,7 @@ export default function HomeNota() {
 
   const [notas, setNotas] = useState([]);
   const [aluno, setAluno] = useState(null);
+  const [disciplinas, setDisciplinas] = useState([]); 
 
   useEffect(() => {
     async function fetchAluno() {
@@ -93,8 +72,20 @@ export default function HomeNota() {
       }
     }
 
+    async function fetchDisciplinas() {
+      try {
+        const res = await fetch("http://localhost:3001/disciplinas"); 
+        if (!res.ok) throw new Error("Disciplinas não encontradas");
+        const data = await res.json();
+        setDisciplinas(data); 
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
     fetchAluno();
     fetchNotas();
+    fetchDisciplinas(); 
   }, [id]);
 
   const atualizarNotas = async () => {
@@ -112,13 +103,17 @@ export default function HomeNota() {
 
   const primeiraNotaId = notas.length > 0 ? notas[0].id : null;
 
-  // Nota com nome da disciplina para passar ao DeletarNota
   const primeiraNota = notas.find((n) => n.id === primeiraNotaId);
   const primeiraNotaComNomeDisciplina = primeiraNota
-    ? { ...primeiraNota, disciplina_nome: disciplinasFixas[primeiraNota.disciplina_id] }
+    ? {
+        ...primeiraNota,
+        disciplina_nome: disciplinas.find(
+          (d) => d.id === primeiraNota.disciplina_id
+        )?.nome, 
+      }
     : null;
 
-  const medias = calcularMediasPorDescricaoENMateria(notas);
+  const medias = calcularMedia(notas);
 
   return (
     <Box sx={{ p: 2, maxWidth: 900, mx: "auto" }}>
@@ -140,38 +135,18 @@ export default function HomeNota() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {notas.map(({ id, disciplina_id, trimestre, nota, descricao }) => (
-              <TableRow key={id}>
-                <TableCell>{disciplinasFixas[disciplina_id]}</TableCell>
-                <TableCell>{trimestre}</TableCell>
-                <TableCell>{nota}</TableCell>
-                <TableCell>{descricao || "-"}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
-        Médias por Descrição e Disciplina
-      </Typography>
-      <TableContainer component={Paper} sx={{ mb: 4 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Descrição</TableCell>
-              <TableCell>Disciplina</TableCell>
-              <TableCell>Média</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {medias.map(({ descricao, disciplina_id, media }) => (
-              <TableRow key={`${descricao}-${disciplina_id}`}>
-                <TableCell>{descricao === "sem_descricao" ? "-" : descricao}</TableCell>
-                <TableCell>{disciplinasFixas[disciplina_id]}</TableCell>
-                <TableCell>{media.toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
+            {notas.map(({ id, disciplina_id, trimestre, nota, descricao }) => {
+              // Buscar o nome da disciplina usando o ID
+              const disciplina = disciplinas.find((d) => d.id === disciplina_id);
+              return (
+                <TableRow key={id}>
+                  <TableCell>{disciplina ? disciplina.nome : "Desconhecida"}</TableCell>
+                  <TableCell>{trimestre}</TableCell>
+                  <TableCell>{nota}</TableCell>
+                  <TableCell>{descricao || "-"}</TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -195,7 +170,7 @@ export default function HomeNota() {
           color="warning"
           onClick={() => {
             if (!primeiraNotaId) return alert("Nenhuma nota para editar.");
-            navigate(`/editarNota/${primeiraNotaId}`);
+            navigate(`/editarNota/${aluno.id}`);
           }}
           fullWidth={isSmallScreen}
           disabled={!primeiraNotaId}

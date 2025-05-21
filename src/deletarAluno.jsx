@@ -15,10 +15,10 @@ import {
 } from "@mui/material";
 
 export default function DeletarAluno() {
-  const [id, setId] = useState("");
+  const [id, setId] = useState(""); 
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [alunoNome, setAlunoNome] = useState("");
+  const [alunoNome, setAlunoNome] = useState(""); 
   const isSmallScreen = useMediaQuery("(max-width:600px)");
 
   const buscarAluno = async () => {
@@ -31,8 +31,9 @@ export default function DeletarAluno() {
       const res = await fetch(`http://localhost:3001/alunos/${id}`);
       if (!res.ok) throw new Error("Aluno não encontrado");
       const data = await res.json();
+     
       setAlunoNome(`${data.nome} ${data.sobrenome}`);
-      setDialogOpen(true);
+      setDialogOpen(true); 
     } catch (error) {
       alert(error.message);
       setAlunoNome("");
@@ -51,7 +52,7 @@ export default function DeletarAluno() {
       alert(`Aluno ${alunoNome} deletado com sucesso!`);
       setId("");
       setAlunoNome("");
-      setDialogOpen(false);
+      setDialogOpen(false); 
     } catch (error) {
       alert(error.message);
     } finally {
@@ -114,7 +115,6 @@ export default function DeletarAluno() {
           </Stack>
         </CardContent>
 
-        {/* Dialog para confirmar deleção */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
           <DialogTitle>Confirmar Deleção</DialogTitle>
           <DialogContent>

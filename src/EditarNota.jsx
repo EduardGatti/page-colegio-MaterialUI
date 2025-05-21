@@ -1,280 +1,270 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Card,
-  CardContent,
-  Stack,
-  TextField,
-  Button,
   Typography,
-  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
   useMediaQuery,
-  Autocomplete,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  IconButton,
 } from "@mui/material";
-import SendIcon from "@mui/icons-material/Send";
 import { useParams, useNavigate } from "react-router-dom";
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-export default function EditarNota() {
-  const { id } = useParams(); // id do aluno
+export default function HomeNota() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const isSmallScreen = useMediaQuery("(max-width:600px)");
 
+  const [notas, setNotas] = useState([]);
   const [aluno, setAluno] = useState(null);
   const [disciplinas, setDisciplinas] = useState([]);
-  const [notas, setNotas] = useState([]);
-
-  const [disciplinaId, setDisciplinaId] = useState("");
-  const [trimestre, setTrimestre] = useState("");
-  const [nota, setNota] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [erroNota, setErroNota] = useState("");
+  const [notaEditando, setNotaEditando] = useState(null);
+  const [notaEditada, setNotaEditada] = useState({
+    disciplina_id: "",
+    trimestre: "",
+    nota: "",
+    descricao: "",
+  });
+  const [erros, setErros] = useState({
+    nota: false,
+  });
 
   useEffect(() => {
-    async function fetchAluno() {
+    async function fetchData() {
       try {
-        const res = await fetch(`http://localhost:3001/alunos/${id}`);
-        if (!res.ok) throw new Error("Aluno não encontrado");
-        const data = await res.json();
-        setAluno(data);
+        const alunoRes = await fetch(`http://localhost:3001/alunos/${id}`);
+        if (!alunoRes.ok) throw new Error("Aluno não encontrado");
+        const alunoData = await alunoRes.json();
+        setAluno(alunoData);
+
+        const notasRes = await fetch(`http://localhost:3001/notas/aluno/${id}`);
+        if (!notasRes.ok) throw new Error("Notas não encontradas");
+        const notasData = await notasRes.json();
+        setNotas(Array.isArray(notasData) ? notasData : []);
+
+        const disciplinasRes = await fetch("http://localhost:3001/disciplinas");
+        if (!disciplinasRes.ok) throw new Error("Disciplinas não encontradas");
+        const disciplinasData = await disciplinasRes.json();
+        setDisciplinas(disciplinasData);
       } catch (error) {
-        alert(error.message);
-      }
-    }
-    async function fetchDisciplinas() {
-      try {
-        const res = await fetch("http://localhost:3001/disciplinas");
-        if (!res.ok) throw new Error("Disciplinas não encontradas");
-        const data = await res.json();
-        setDisciplinas(data);
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-    async function fetchNotas() {
-      try {
-        const res = await fetch(`http://localhost:3001/notas/aluno/${id}`);
-        if (!res.ok) throw new Error("Notas não encontradas");
-        const data = await res.json();
-        setNotas(data);
-      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
         alert(error.message);
       }
     }
 
-    fetchAluno();
-    fetchDisciplinas();
-    fetchNotas();
+    fetchData();
   }, [id]);
 
-  useEffect(() => {
-    if (!disciplinaId) {
-      setNota("");
-      setDescricao("");
-      setTrimestre("");
-      return;
-    }
-
-    const notaSelecionada = notas.find(
-      (n) => n.disciplina_id === Number(disciplinaId)
-    );
-
-    if (notaSelecionada) {
-      setNota(notaSelecionada.nota.toString());
-      setDescricao(notaSelecionada.descricao || "");
-      setTrimestre(notaSelecionada.trimestre.toString());
-    } else {
-      setNota("");
-      setDescricao("");
-      setTrimestre("");
-    }
-  }, [disciplinaId, notas]);
-
-  const validarNota = (value) => {
-    const num = Number(value);
-    if (isNaN(num) || num < 0 || num > 10) {
-      setErroNota("Nota deve ser um número entre 0 e 10");
-      return false;
-    }
-    setErroNota("");
-    return true;
+  const validarNota = (nota) => {
+    const num = parseFloat(nota);
+    return !isNaN(num) && num >= 1 && num <= 10;
   };
 
-const descricoesOptions = React.useMemo(() => {
-  const descricoes = notas
-    .map((n) => n.descricao)
-    .filter((desc) => desc && desc.trim() !== "");
+  const handleEditarNota = (nota) => {
+    setNotaEditando(nota);
+    setNotaEditada({
+      disciplina_id: nota.disciplina_id,
+      trimestre: nota.trimestre,
+      nota: nota.nota,
+      descricao: nota.descricao || "",
+    });
+    setErros({ nota: false });
+  };
 
-  console.log("Descrições únicas encontradas:", [...new Set(descricoes)]);
-  return [...new Set(descricoes)];
-}, [notas]);
+  const handleFecharEdicao = () => {
+    setNotaEditando(null);
+  };
 
-
-
-  const handleSubmit = async () => {
-    if (!validarNota(nota)) return;
-    if (!trimestre.trim()) {
-      alert("Trimestre é obrigatório");
+  const handleSalvarEdicao = async () => {
+    if (!validarNota(notaEditada.nota)) {
+      setErros({ nota: true });
       return;
     }
-    if (!disciplinaId) {
-      alert("Disciplina é obrigatória");
-      return;
-    }
-
-    const data = {
-      aluno_id: Number(id),
-      disciplina_id: Number(disciplinaId),
-      trimestre: Number(trimestre),
-      nota: Number(nota),
-      descricao: descricao.trim(),
-    };
 
     try {
-      const res = await fetch(`http://localhost:3001/notas/${id}`, {
+      const response = await fetch(`http://localhost:3001/notas/${notaEditando.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(notaEditada),
       });
 
-      if (res.ok) {
-        alert("Nota atualizada com sucesso!");
-        navigate(`/homeNota/${id}`);
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error || "Erro ao atualizar nota");
-      }
+      if (!response.ok) throw new Error("Erro ao atualizar nota");
+
+      setNotas(notas.map(nota => 
+        nota.id === notaEditando.id ? { ...nota, ...notaEditada } : nota
+      ));
+
+      handleFecharEdicao();
+      alert("Nota atualizada com sucesso!");
     } catch (error) {
-      alert("Erro na conexão com o servidor");
+      console.error("Erro ao salvar edição:", error);
+      alert(error.message);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setNotaEditada(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (name === "nota") {
+      setErros(prev => ({
+        ...prev,
+        nota: !validarNota(value)
+      }));
     }
   };
 
   if (!aluno) return <Typography>Carregando dados do aluno...</Typography>;
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "#f5f5f5",
-        p: 2,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Card
-        sx={{
-          width: isSmallScreen ? "100%" : 500,
-          p: 4,
-          borderRadius: 3,
-          boxShadow: 4,
-          bgcolor: "#fff",
-        }}
-      >
-        <CardContent>
-          <Typography
-            variant="h5"
-            sx={{
-              mb: 3,
-              fontWeight: "bold",
-              color: "#1976d2",
-              textAlign: "center",
-              fontFamily: "'Playfair Display', serif",
-            }}
-          >
-            Editar Nota de {aluno.nome} {aluno.sobrenome}
-          </Typography>
+    <Box sx={{ p: 2, maxWidth: 900, mx: "auto" }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+        <IconButton 
+          onClick={() => navigate(-1)} 
+          sx={{ mr: 2 }}
+          color="primary"
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Typography
+          variant={isSmallScreen ? "h6" : "h4"}
+          sx={{ fontWeight: "bold", color: "#1976d2" }}
+        >
+          Notas de {aluno.nome} {aluno.sobrenome}
+        </Typography>
+      </Box>
 
-          <Stack spacing={3}>
-            <TextField
-              select
-              required
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Disciplina</TableCell>
+              <TableCell>Trimestre</TableCell>
+              <TableCell>Nota</TableCell>
+              <TableCell>Descrição</TableCell>
+              <TableCell>Ações</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {notas.map((nota) => {
+              const disciplina = disciplinas.find((d) => d.id === nota.disciplina_id);
+              return (
+                <TableRow key={nota.id}>
+                  <TableCell>{disciplina ? disciplina.nome : "Desconhecida"}</TableCell>
+                  <TableCell>{nota.trimestre}</TableCell>
+                  <TableCell>{nota.nota}</TableCell>
+                  <TableCell>{nota.descricao || "-"}</TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="outlined" 
+                      color="primary"
+                      onClick={() => handleEditarNota(nota)}
+                    >
+                      Editar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <Dialog open={Boolean(notaEditando)} onClose={handleFecharEdicao}>
+        <DialogTitle>Editar Nota</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Disciplina</InputLabel>
+            <Select
+              name="disciplina_id"
+              value={notaEditada.disciplina_id}
+              onChange={handleChange}
               label="Disciplina"
-              variant="filled"
-              value={disciplinaId}
-              onChange={(e) => setDisciplinaId(e.target.value)}
-              fullWidth
             >
-              <MenuItem value="">Selecione uma disciplina</MenuItem>
-              {disciplinas.map(({ id, nome }) => (
-                <MenuItem key={id} value={id}>
-                  {nome}
+              {disciplinas.map((disciplina) => (
+                <MenuItem key={disciplina.id} value={disciplina.id}>
+                  {disciplina.nome}
                 </MenuItem>
               ))}
-            </TextField>
+            </Select>
+          </FormControl>
 
-            <TextField
-              required
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Trimestre</InputLabel>
+            <Select
+              name="trimestre"
+              value={notaEditada.trimestre}
+              onChange={handleChange}
               label="Trimestre"
-              variant="filled"
-              value={trimestre}
-              onChange={(e) => setTrimestre(e.target.value)}
-              fullWidth
-            />
+            >
+              <MenuItem value={1}>1º Trimestre</MenuItem>
+              <MenuItem value={2}>2º Trimestre</MenuItem>
+              <MenuItem value={3}>3º Trimestre</MenuItem>
+              <MenuItem value={4}>4º Trimestre</MenuItem>
+            </Select>
+          </FormControl>
 
-            <TextField
-              required
-              label="Nota (0 a 10)"
-              variant="filled"
-              value={nota}
-              type="number"
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "" || (Number(val) >= 0 && Number(val) <= 10)) {
-                  setNota(val);
-                  setErroNota("");
-                } else {
-                  setErroNota("Nota deve ser entre 0 e 10");
-                }
-              }}
-              error={!!erroNota}
-              helperText={erroNota}
-              inputProps={{ min: 0, max: 10, step: 0.1 }}
-              fullWidth
-            />
+          <TextField
+            fullWidth
+            margin="normal"
+            name="nota"
+            label="Nota"
+            type="number"
+            value={notaEditada.nota}
+            onChange={handleChange}
+            error={erros.nota}
+            helperText={erros.nota ? "A nota deve ser entre 1 e 10" : ""}
+            inputProps={{ 
+              min: "1", 
+              max: "10", 
+              step: "0.1",
+            }}
+          />
 
-            <Autocomplete
-              freeSolo
-              options={descricoesOptions}
-              value={descricao}
-              onChange={(event, newValue) => {
-                if (typeof newValue === "string") {
-                  setDescricao(newValue);
-                } else if (newValue && newValue.inputValue) {
-                  setDescricao(newValue.inputValue);
-                } else {
-                  setDescricao(newValue || "");
-                }
-              }}
-              onInputChange={(event, newInputValue) => {
-                setDescricao(newInputValue);
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Descrição (opcional)"
-                  variant="filled"
-                  multiline
-                  rows={3}
-                  fullWidth
-                />
-              )}
-            />
-          </Stack>
-        </CardContent>
-
-        <Button
-          variant="contained"
-          endIcon={<SendIcon />}
-          onClick={handleSubmit}
-          fullWidth
-          sx={{ mt: 3, py: 1.5, fontWeight: "bold" }}
-          disabled={
-            !!erroNota || nota === "" || trimestre.trim() === "" || disciplinaId === ""
-          }
-        >
-          Atualizar Nota
-        </Button>
-      </Card>
+          <TextField
+            fullWidth
+            margin="normal"
+            name="descricao"
+            label="Descrição"
+            value={notaEditada.descricao}
+            onChange={handleChange}
+            multiline
+            rows={3}
+            disabled
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleFecharEdicao}>Cancelar</Button>
+          <Button 
+            onClick={handleSalvarEdicao} 
+            color="primary" 
+            variant="contained"
+            disabled={erros.nota}
+          >
+            Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
